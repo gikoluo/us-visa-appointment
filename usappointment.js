@@ -126,9 +126,9 @@ const axios = require('axios');
     }
     //#endregion
 
-    async function runLogic() {
+    async function runLogic(browser) {
       //#region Init puppeteer
-      const browser = await puppeteer.launch();
+      //const browser = await puppeteer.launch();
       // Comment above line and uncomment following line to see puppeteer in action
       //const browser = await puppeteer.launch({ headless: false });
       const page = await browser.newPage();
@@ -137,6 +137,7 @@ const axios = require('axios');
       const smallTimeout = 100;
       page.setDefaultTimeout(timeout);
       page.setDefaultNavigationTimeout(navigationTimeout);
+      page.setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
       //#endregion
 
       //#region Logic
@@ -222,11 +223,13 @@ const axios = require('axios');
           await scrollIntoViewIfNeeded(element, timeout);
           await element.click({ offset: { x: 34, y: 11.34375} });
           await targetPage.waitForNavigation();
+          console.log("Login successful!");
       }
 
       // We are logged in now. Check available dates from the API
       {
           const targetPage = page;
+          await targetPage.setExtraHTTPHeaders({'Accept': 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest'});
           const response = await targetPage.goto('https://ais.usvisa-info.com/en-' + region + '/niv/schedule/' + appointmentId + '/appointment/days/' + consularId + '.json?appointments[expedite]=false');
 
           const availableDates = JSON.parse(await response.text());
@@ -340,10 +343,18 @@ const axios = require('axios');
       return true;
       //#endregion
     }
+    async function close(browser) {
+           const pages = await browser.pages();
+           for ( let i=0; i< pages.length; i++ ) {
+                await pages[i].close();
+           }
+           await browser.close();
+    }
 
     while (true){
+      const browser = await puppeteer.launch ( { headless: true });
       try{
-        const result = await runLogic();
+        const result = await runLogic(browser);
 
         if (result){
           notify("Successfully scheduled a new appointment");
@@ -351,6 +362,8 @@ const axios = require('axios');
         }
       } catch (err){
         // Swallow the error and keep running in case we encountered an error.
+      } finally {
+          close ( browser );
       }
 
       await sleep(retryTimeout);
