@@ -12,6 +12,7 @@ This might be able to used for other countries by finding the consular ids menti
     2. npm install minimist --save
     3. npm install axios --save
 3. Install Pushover Notifications app from App Store/Google Play if you would like to have push notifications when a date is found
+3. Install Telegram app from App Store/Google Play if you would like to have push notifications when a date is found
 
 ## Usage
 
@@ -19,11 +20,11 @@ Open command line or terminal window and navigate to the folder usappointment.js
 
 **Mac/Linux:**
 
->node usappointment.js -r 'ca' -d '2022-06-22' -u 'username' -p 'password' -a 359734258 -c 95 -t 120 -n 'pu5hov3ru53rk3y'
+>node usappointment.js -r 'ca' -d '2022-06-22' -u 'username' -p 'password' -a 359734258 -c 95 -t 120 -n 'pu5hov3ru53rk3y' -m '45653648'
 
 **Windows:**
 
->node usappointment.js -r "ca" -d "2022-06-22" -u "username" -p "password" -a 359734258 -c 95 -t 120 -n "pu5hov3ru53rk3y"
+>node usappointment.js -r "ca" -d "2022-06-22" -u "username" -p "password" -a 359734258 -c 95 -t 120 -n 'pu5hov3ru53rk3y' -m '45653648'
 
 ## Command line arguments
 
@@ -42,6 +43,10 @@ Open command line or terminal window and navigate to the folder usappointment.js
 **-t** Retry timeout in seconds. Keep this above 120 seconds to make sure you are not getting temporarily banned from receiving available dates
 
 **-n** Pushover User Key from Pushover Notifications app. Do not provide this argument if you don't want to receive notifications.
+
+**-n** Telegram Bot Key. Do not provide this argument if you don't want to receive notifications.
+
+**-m** Telegram Group ID, without the nagetive signal. Do not provide this argument if you don't want to receive notifications.
 
 **-g** Use this argument without any value if your application consists more than one person
 

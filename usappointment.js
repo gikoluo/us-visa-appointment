@@ -1,19 +1,22 @@
 const puppeteer = require('puppeteer');
 const parseArgs = require('minimist');
 const axios = require('axios');
+const TelegramBot = require('node-telegram-bot-api');
 
 (async () => {
     //#region Command line args
-    const args = parseArgs(process.argv.slice(2), {string: ['u', 'p', 'c', 'a', 'n', 'd', 'r'], boolean: ['g']})
+    const args = parseArgs(process.argv.slice(2), {string: ['u', 'p', 'c', 'a', 'n', 'm', 'd', 'r'], boolean: ['g']})
     const currentDate = new Date(args.d);
     const usernameInput = args.u;
     const passwordInput = args.p;
     const appointmentId = args.a;
     const retryTimeout = args.t * 1000;
     const consularId = args.c;
-    const userToken = args.n;
     const groupAppointment = args.g;
     const region = args.r;
+    const telegramToken = args.n;
+    const telegramGroupId = args.m;
+    
     //#endregion
 	
     //#region Helper functions
@@ -108,21 +111,17 @@ const axios = require('axios');
     }
 
     async function notify(msg) {
-      log(msg);
-
-      if (!userToken) {
+      log(msg)
+      
+      if (!telegramToken || !telegramGroupId) {
         return;
       }
+      
+      const TelegramBot = require('node-telegram-bot-api');
+      const bot = new TelegramBot(telegramToken, {polling: false});
+      
+      await bot.sendMessage("-" + telegramGroupId, msg);
 
-      const pushOverAppToken = 'a5o8qtigtvu3yyfaeehtnzfkm88zc9';
-      const apiEndpoint = 'https://api.pushover.net/1/messages.json';
-      const data = {
-        token: pushOverAppToken,
-        user: userToken,
-        message: msg
-      };
-
-      await axios.post(apiEndpoint, data);
     }
     //#endregion
 
@@ -153,7 +152,7 @@ const axios = require('axios');
           const targetPage = page;
           await targetPage.goto('https://ais.usvisa-info.com/en-' + region + '/niv/users/sign_in', { waitUntil: 'domcontentloaded' });
       }
-
+      
       // Click on username input
       {
           const targetPage = page;
@@ -253,10 +252,11 @@ const axios = require('axios');
           console.log("Found an earlier date!")
 
           notify("Found an earlier date! " + firstDate.toISOString().slice(0,10));
-      }    
+      }
 
       // Go to appointment page
       {
+          log("Start to make appointment: ", 'https://ais.usvisa-info.com/en-' + region + '/niv/schedule/' + appointmentId + '/appointment')
           const targetPage = page;
           await targetPage.goto('https://ais.usvisa-info.com/en-' + region + '/niv/schedule/' + appointmentId + '/appointment', { waitUntil: 'domcontentloaded' });
           await sleep(1000);
@@ -264,6 +264,7 @@ const axios = require('axios');
 
       // Select multiple people if it is a group appointment
       {
+          log("Select group")
           if(groupAppointment){
             const targetPage = page;
             const element = await waitForSelectors([["aria/Continue"],["#main > div.mainContent > form > div:nth-child(3) > div > input"]], targetPage, { timeout, visible: true });
@@ -284,6 +285,7 @@ const axios = require('axios');
 
       // Click on date input
       {
+          log("Select date")
           const targetPage = page;
           const element = await waitForSelectors([["aria/Date of Appointment *"],["#appointments_consulate_appointment_date"]], targetPage, { timeout, visible: true });
           await scrollIntoViewIfNeeded(element, timeout);
@@ -295,6 +297,7 @@ const axios = require('axios');
       {
           const targetPage = page;
           while (true) {
+            log("Try next step")
             try {
               const element = await waitForSelectors([["aria/25[role=\"link\"]"],["#ui-datepicker-div > div.ui-datepicker-group.ui-datepicker-group > table > tbody > tr > td.undefined > a"]], targetPage, { timeout:smallTimeout, visible: true });
               await scrollIntoViewIfNeeded(element, timeout);
@@ -314,6 +317,7 @@ const axios = require('axios');
 
       // Select the first available Time from the time dropdown
       {
+          log("Select the first available Time from the time dropdown")
           const targetPage = page;
           const element = await waitForSelectors([["#appointments_consulate_appointment_time"]], targetPage, { timeout, visible: true });
           await scrollIntoViewIfNeeded(element, timeout);
@@ -327,6 +331,7 @@ const axios = require('axios');
 
       // Click on reschedule button
       {
+          log("Click on reschedule button")
           const targetPage = page;
           const element = await waitForSelectors([["aria/Reschedule"],["#appointments_submit"]], targetPage, { timeout, visible: true });
           await scrollIntoViewIfNeeded(element, timeout);
@@ -336,13 +341,15 @@ const axios = require('axios');
 
       // Click on submit button on the confirmation popup
       {
+        log("Click on submit button")
         const targetPage = page;
         const element = await waitForSelectors([["aria/Cancel"],["body > div.reveal-overlay > div > div > a.button.alert"]], targetPage, { timeout, visible: true });
         await scrollIntoViewIfNeeded(element, timeout);
         await page.click('body > div.reveal-overlay > div > div > a.button.alert');
         await sleep(5000);
       }
-
+      
+      log("Done")
       await browser.close();
       return true;
       //#endregion
