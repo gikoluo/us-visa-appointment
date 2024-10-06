@@ -251,7 +251,7 @@ const TelegramBot = require('node-telegram-bot-api');
           }
           console.log("Found an earlier date!")
 
-          notify("Found an earlier date! " + firstDate.toISOString().slice(0,10));
+          notify("Found an earlier date! " + firstDate.toISOString().slice(0,10) + " for " + usernameInput);
       }
 
       // Go to appointment page
@@ -370,7 +370,7 @@ const TelegramBot = require('node-telegram-bot-api');
         const result = await runLogic(browser);
 
         if (result){
-          notify("Successfully scheduled a new appointment");
+          notify("Successfully scheduled a new appointment" + " for " + usernameInput);
           break;
         }
       } catch (err){
