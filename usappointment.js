@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer');
 const parseArgs = require('minimist');
 const axios = require('axios');
 const TelegramBot = require('node-telegram-bot-api');
+const fs = require('node:fs');
 
 (async () => {
     //#region Command line args
@@ -140,7 +141,17 @@ const TelegramBot = require('node-telegram-bot-api');
       //#endregion
 
       //#region Logic
-	  
+      
+      // Check Paused status
+      {
+        const data = fs.readFileSync('PAUSE', { encoding: 'utf8' });
+        log(data)
+        if (data.search(usernameInput) > -1) {
+          log("Paused account: " + usernameInput)
+          return false
+        }
+      }
+      
       // Set the viewport to avoid elements changing places 
       {
           const targetPage = page;
@@ -160,6 +171,7 @@ const TelegramBot = require('node-telegram-bot-api');
           await scrollIntoViewIfNeeded(element, timeout);
           await element.click({ offset: { x: 118, y: 21.453125} });
       }
+      
       // Type username
       {
           const targetPage = page;
@@ -192,7 +204,7 @@ const TelegramBot = require('node-telegram-bot-api');
       {
           const targetPage = page;
           const element = await waitForSelectors([["aria/Password"],["#user_password"]], targetPage, { timeout, visible: true });
-		  await scrollIntoViewIfNeeded(element, timeout);
+		      await scrollIntoViewIfNeeded(element, timeout);
           const type = await element.evaluate(el => el.type);
           if (["textarea","select-one","text","url","tel","search","password","number","email"].includes(type)) {
             await element.type(passwordInput);
@@ -243,7 +255,8 @@ const TelegramBot = require('node-telegram-bot-api');
           }
           
           const firstDate = new Date(availableDates[0].date);
-
+          
+          //In case the data is not avaiable when choosing date.
           if (firstDate > currentDate) {
             log("There is not an earlier date available than " + currentDate.toISOString().slice(0,10));
             await browser.close();
@@ -301,15 +314,33 @@ const TelegramBot = require('node-telegram-bot-api');
             try {
               const element = await waitForSelectors([["aria/25[role=\"link\"]"],["#ui-datepicker-div > div.ui-datepicker-group.ui-datepicker-group > table > tbody > tr > td.undefined > a"]], targetPage, { timeout:smallTimeout, visible: true });
               await scrollIntoViewIfNeeded(element, timeout);
-              await page.click('#ui-datepicker-div > div.ui-datepicker-group.ui-datepicker-group > table > tbody > tr > td.undefined > a');
-              await sleep(500);
-              break;
+              
+              const y = await page.evaluate(el => el.parentNode.getAttribute("data-year"), element);
+              const m = await page.evaluate(el => el.parentNode.getAttribute("data-month"), element);
+              const d = await page.evaluate(el => el.textContent, element);
+              
+              const d2 = new Date(y + "-" + m + '-' + d)
+              
+              log("Select Date! " + y + "-" + m + '-' + d)
+              
+              if ( d2 && d2 < currentDate) {
+                log("Go Date! " + y + "-" + m + '-' + d)
+                await page.click('#ui-datepicker-div > div.ui-datepicker-group.ui-datepicker-group > table > tbody > tr > td.undefined > a');
+                await sleep(500);
+                break;
+              }
+              else {
+                log("Date has gone, retry! " + d2)
+                await browser.close();
+                return false;
+              }
             } catch (err) {
               {
-                  const targetPage = page;
-                  const element = await waitForSelectors([["aria/Next","aria/[role=\"generic\"]"],["#ui-datepicker-div > div.ui-datepicker-group.ui-datepicker-group-last > div > a > span"]], targetPage, { timeout, visible: true });
-                  await scrollIntoViewIfNeeded(element, timeout);
-                  await element.click({ offset: { x: 4, y: 9.03125} });
+                log("Error " + err)
+                const targetPage = page;
+                const element = await waitForSelectors([["aria/Next","aria/[role=\"generic\"]"],["#ui-datepicker-div > div.ui-datepicker-group.ui-datepicker-group-last > div > a > span"]], targetPage, { timeout, visible: true });
+                await scrollIntoViewIfNeeded(element, timeout);
+                await element.click({ offset: { x: 4, y: 9.03125} });
               }
             }
           }
@@ -355,14 +386,14 @@ const TelegramBot = require('node-telegram-bot-api');
       //#endregion
     }
     
-   async function close(browser) {
+    async function close(browser) {
     const pages = await browser.pages();
-	   for ( let i=0; i< pages.length; i++ ) {
-		await pages[i].close();
+      for ( let i=0; i< pages.length; i++ ) {
+    await pages[i].close();
 
-	   }
-	   await browser.close();
-   }
+      }
+      await browser.close();
+    }
 
     while (true){
 	    const browser = await puppeteer.launch ( { headless: true });
@@ -371,9 +402,17 @@ const TelegramBot = require('node-telegram-bot-api');
 
         if (result){
           notify("Successfully scheduled a new appointment" + " for " + usernameInput);
+          const content = usernameInput
+          fs.writeFile('PAUSE', content, err => {
+            if (err) {
+              console.error(err);
+            } else {
+            }
+          });
           break;
         }
       } catch (err){
+        log(err)
         // Swallow the error and keep running in case we encountered an error.
       } finally {
         close ( browser );
