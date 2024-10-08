@@ -272,7 +272,7 @@ const fs = require('node:fs');
           log("Start to make appointment: ", 'https://ais.usvisa-info.com/en-' + region + '/niv/schedule/' + appointmentId + '/appointment')
           const targetPage = page;
           await targetPage.goto('https://ais.usvisa-info.com/en-' + region + '/niv/schedule/' + appointmentId + '/appointment', { waitUntil: 'domcontentloaded' });
-          await sleep(1000);
+          await sleep(smallTimeout);
       }     
 
       // Select multiple people if it is a group appointment
@@ -283,7 +283,7 @@ const fs = require('node:fs');
             const element = await waitForSelectors([["aria/Continue"],["#main > div.mainContent > form > div:nth-child(3) > div > input"]], targetPage, { timeout, visible: true });
             await scrollIntoViewIfNeeded(element, timeout);
             await element.click({ offset: { x: 70.515625, y: 25.25} });
-            await sleep(1000);
+            await sleep(smallTimeout);
           }
       }
 
@@ -293,7 +293,7 @@ const fs = require('node:fs');
           const element = await waitForSelectors([["aria/Consular Section Appointment","aria/[role=\"combobox\"]"],["#appointments_consulate_appointment_facility_id"]], targetPage, { timeout, visible: true });
           await scrollIntoViewIfNeeded(element, timeout);    
           await page.select("#appointments_consulate_appointment_facility_id", consularId);
-          await sleep(1000);
+          await sleep(smallTimeout);
       }
 
       // Click on date input
@@ -303,7 +303,7 @@ const fs = require('node:fs');
           const element = await waitForSelectors([["aria/Date of Appointment *"],["#appointments_consulate_appointment_date"]], targetPage, { timeout, visible: true });
           await scrollIntoViewIfNeeded(element, timeout);
           await element.click({ offset: { x: 394.5, y: 17.53125} });
-          await sleep(1000);
+          await sleep(smallTimeout);
       }
 
       // Keep clicking next button until we find the first available date and click to that date
@@ -319,14 +319,14 @@ const fs = require('node:fs');
               const m = await page.evaluate(el => el.parentNode.getAttribute("data-month"), element);
               const d = await page.evaluate(el => el.textContent, element);
               
-              const d2 = new Date(y + "-" + m + '-' + d)
+              const d2 = new Date(y, m, d)
               
-              log("Select Date! " + y + "-" + m + '-' + d)
+              log("Select Date! " + d2)
               
               if ( d2 && d2 < currentDate) {
-                log("Go Date! " + y + "-" + m + '-' + d)
+                log("Go Date! " + d2)
                 await page.click('#ui-datepicker-div > div.ui-datepicker-group.ui-datepicker-group > table > tbody > tr > td.undefined > a');
-                await sleep(500);
+                await sleep(smallTimeout);
                 break;
               }
               else {
